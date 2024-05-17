@@ -28,24 +28,24 @@ Windows下的Leica Like Watermark生成器，用于批量处理相机产生的�
 > [程序目录]-[config.json]
 -- -- --
 
-| 参数名       | 类型    | 说明     |
-| --------- | ------- | ------- |
-| MakerConfig     | MakerConfigStruct[]   | 相机制造商配置</br>会根据此配置在UserData中生成对应厂商的Input Output文件夹 </br>生成水印的Logo会使用此处配置的图片   |
-| MakerConfigStruct.MakerName     | string   | 厂商名   |
-| MakerConfigStruct.MakerImage     | string   | 厂商Logo图片相对路径   |
-| IgnoreLensModel     | string[]   | 从EXIF中读出这些镜头时忽略，让用户处理 (如老蛙镜头 可能会写入"----"这样的数据)   |
-| NoExifImageConfig     | NoExifImageConfig   | 无法读取Exif信息时的处理方式配置 |
-| NoExifImageConfig.UsePresetInsteadRealtimeUserSelection     | bool  | 是否使用预设值，不用在运行时让用户一个一个选择 |
-| NoExifImageConfig.Preset     | PresetSturct  | 预设值 包含【厂商】【机型】【镜头】【焦段】【ISO】【快门速度】【光圈】【时间】 |
-| NoExifImageConfig.ModelOptions     | string[]  | 当不使用预设值时候，用户可以选择的【机型】选项 |
-| NoExifImageConfig.LensModelOptions     | string[]  | 当不使用预设值时候，用户可以选择的【镜头】选项 |
-| NoExifImageConfig.FocalLengthOptions     | string[]  | 当不使用预设值时候，用户可以选择的【焦段】选项 |
-| NoExifImageConfig.ShutterSpeedValueOptions     | string[]  | 当不使用预设值时候，用户可以选择的【快门速度】选项 |
-| NoExifImageConfig.ApertureValueOptions     | string[]  | 当不使用预设值时候，用户可以选择的【光圈】选项 |
-| NoExifImageConfig.ISOSpeedRatings     | string[]  | 当不使用预设值时候，用户可以选择的【ISO】选项 |
-| EquivalentFocalLength     | EquivalentFocalLengthStruct  | 等效焦距设置  |
-| EquivalentFocalLengthStruct.Current     | string  | 该值必须是【DefineCoefficient】中定义的某个【CoefficientName】其中一个，代表乘上配置的系数 |
-| EquivalentFocalLengthStruct.DefineCoefficientStruct     | DefineCoefficientStruct  | 等效焦距配置 |
-| EquivalentFocalLengthStruct.DefineCoefficientStruct.CoefficientName     | string  | 等效焦距名称 |
-| EquivalentFocalLengthStruct.DefineCoefficientStruct.Coefficient     | string  | 等效焦距系数 |
-|SaveJPG_Quality     | Int64  | 输出JPG图片质量 |
+| 参数名          | 说明     |
+| ---------  | ------- |
+| MakerConfig  | 相机制造商配置</br>会根据此配置在UserData中生成对应厂商的Input Output文件夹 </br>生成水印的Logo会使用此处配置的图片   |
+| --MakerName       | 厂商名   |
+| --MakerImage      | 厂商Logo图片相对路径   |
+| IgnoreLensModel       | 从EXIF中读出这些镜头时忽略，让用户处理 (如老蛙镜头 可能会写入"----"这样的数据)   |
+| NoExifImageConfig       | 无法读取Exif信息时的处理方式配置 |
+| --UsePresetInsteadRealtimeUserSelection     | 是否使用预设值，不用在运行时让用户一个一个选择 |
+| --Preset      | 预设值 包含【厂商】【机型】【镜头】【焦段】【ISO】【快门速度】【光圈】【时间】 |
+| --ModelOptions      | 当不使用预设值时候，用户可以选择的【机型】选项 |
+| --LensModelOptions      | 当不使用预设值时候，用户可以选择的【镜头】选项 |
+| --FocalLengthOptions      | 当不使用预设值时候，用户可以选择的【焦段】选项 |
+| --ShutterSpeedValueOptions     | 当不使用预设值时候，用户可以选择的【快门速度】选项 |
+| --ApertureValueOptions       | 当不使用预设值时候，用户可以选择的【光圈】选项 |
+| --ISOSpeedRatings      | 当不使用预设值时候，用户可以选择的【ISO】选项 |
+| EquivalentFocalLength       | 等效焦距设置  |
+| --Current     | 该值必须是【DefineCoefficient】中定义的某个【CoefficientName】其中一个，代表乘上配置的系数 |
+| --DefineCoefficientStruct      | 等效焦距配置 |
+| ----DefineCoefficientStruct.CoefficientName      | 等效焦距名称 |
+| ----DefineCoefficientStruct.Coefficient      | 等效焦距系数 |
+|SaveJPG_Quality       | 输出JPG图片质量 |
