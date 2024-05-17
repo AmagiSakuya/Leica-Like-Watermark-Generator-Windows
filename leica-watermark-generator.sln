@@ -1,0 +1,27 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.2.32630.192
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "leica-watermark-generator", "leica-watermark-generator\leica-watermark-generator.csproj", "{A2A2C7D8-A5DF-40AD-A385-167F0887CA64}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{ACA305B6-19E0-4640-B3C5-1B880E617F33}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{A2A2C7D8-A5DF-40AD-A385-167F0887CA64}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A2A2C7D8-A5DF-40AD-A385-167F0887CA64}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A2A2C7D8-A5DF-40AD-A385-167F0887CA64}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A2A2C7D8-A5DF-40AD-A385-167F0887CA64}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {9F7608C8-D55D-4960-9364-BD883D98D562}
+	EndGlobalSection
+EndGlobal

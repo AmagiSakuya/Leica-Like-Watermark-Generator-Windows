@@ -1,0 +1,63 @@
+﻿{
+  "MakerConfig": [
+    {
+      "MakerName": "SONY",
+      "MakerImage": "img/SONY.png"
+    },
+    {
+      "MakerName": "Canon",
+      "MakerImage": "img/Canon.png"
+    },
+    {
+      "MakerName": "Nikon",
+      "MakerImage": "img/Nikon.png"
+    },
+    {
+      "MakerName": "Fujifilm",
+      "MakerImage": "img/Fujifilm.png"
+    }
+  ],
+  "IgnoreLensModel": [ "----" ],
+  "NoExifImageConfig": {
+    "UsePresetInsteadRealtimeUserSelection": false,
+    "Preset": {
+      "Make": "SONY",
+      "Model": "ILCE-7M4",
+      "LensModel": "Tamron 28-75mm F/2.8 DiIII VXD G2",
+      "FocalLength": "75",
+      "ISOSpeed": "100",
+      "ShutterSpeedValue": "1/125",
+      "ApertureValue": "f/2.8",
+      "DateTime": "2024/05/01 20:15:30"
+    },
+    "ModelOptions": [ "ILCE-7M4", "EOS R" ],
+    "LensModelOptions": [
+      "Tamron 28-75mm F/2.8 DiIII VXD G2",
+      "Laowa FFII 90mm F2.8 CA-Dreamer Macro 2X",
+      "蔡司® Vario-Sonnar T* 9.4-25.7mm F1.8-2.8",
+      "Canon RF35mm F1.8 MACRO IS STM"
+    ],
+    "FocalLengthOptions": [ "24", "28", "35", "50", "70", "75", "90", "100" ],
+    "ShutterSpeedValueOptions": [ "1/30", "1/60", "1/125" ],
+    "ApertureValueOptions": [ "f/1.8", "f/2.8", "f/4", "f/5.6" ],
+    "ISOSpeedRatings": [ "100", "160", "200", "400", "800", "1600", "3200", "6400" ]
+  },
+  "EquivalentFocalLength": {
+    "Current": "FullFrame",
+    "DefineCoefficient": [
+      {
+        "CoefficientName": "FullFrame",
+        "Coefficient": 1.0
+      },
+      {
+        "CoefficientName": "APS-C",
+        "Coefficient": 1.5
+      },
+      {
+        "CoefficientName": "OneInch",
+        "Coefficient": 2.72
+      }
+    ]
+  },
+  "SaveJPG_Quality": 99
+}
