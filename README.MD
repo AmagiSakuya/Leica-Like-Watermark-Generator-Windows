@@ -30,9 +30,6 @@ Windows下的Leica Like Watermark生成器，用于批量处理相机产生的�
 
 | 参数名          | 说明     |
 | ---------  | ------- |
-| MakerConfig  | 相机制造商配置</br>会根据此配置在UserData中生成对应厂商的Input Output文件夹 </br>生成水印的Logo会使用此处配置的图片   |
-| --MakerName       | 厂商名   |
-| --MakerImage      | 厂商Logo图片相对路径   |
 | IgnoreLensModel       | 从EXIF中读出这些镜头时忽略，让用户处理 (如老蛙镜头 可能会写入"----"这样的数据)   |
 | NoExifImageConfig       | 无法读取Exif信息时的处理方式配置 |
 | --UsePresetInsteadRealtimeUserSelection     | 是否使用预设值，不用在运行时让用户一个一个选择 |
