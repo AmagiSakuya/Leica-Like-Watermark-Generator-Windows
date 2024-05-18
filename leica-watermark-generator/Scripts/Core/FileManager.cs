@@ -38,10 +38,15 @@ namespace leica_watermark_generator.Scripts.Core
 
         public static string[] ReadDirJPGs(string dirPath, string tipsUseDir)
         {
-            // 读取 Sony 文件夹下的 JPG 图片
             string[] jpgFiles = Directory.GetFiles(dirPath, "*.jpg");
             Console.WriteLine($"Found {jpgFiles.Length} JPG images in [{tipsUseDir}]");
             return jpgFiles;
+        }
+
+        public static string[] ReadDirPngs(string dirPath)
+        {
+            string[] pngFiles = Directory.GetFiles(dirPath, "*.png");
+            return pngFiles;
         }
         #endregion
 

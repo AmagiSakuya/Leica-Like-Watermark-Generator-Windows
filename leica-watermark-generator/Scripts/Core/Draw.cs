@@ -36,7 +36,8 @@ namespace leica_watermark_generator.Scripts.Core
                 }
 
                 //绘制机型
-                DrawText(g, string.Format("{0} {1}", exif_info.Make, exif_info.Model), new PointF(205, 82), privateFonts.Families[0], 58, 3, Color.Black, Color.Black);
+                //DrawText(g, string.Format("{0} {1}", exif_info.Make, exif_info.Model), new PointF(205, 82), privateFonts.Families[0], 58, 3, Color.Black, Color.Black);
+                DrawText(g, string.Format("{0}", exif_info.Model), new PointF(205, 82), privateFonts.Families[0], 58, 3, Color.Black, Color.Black);
                 //镜头
                 DrawText(g, exif_info.LensModel, new PointF(210, 200), privateFonts.Families[0], 38, 0, ColorTranslator.FromHtml("#7E7E7C"), Color.Black);
                 //参数
@@ -112,9 +113,9 @@ namespace leica_watermark_generator.Scripts.Core
         }
         #endregion
 
-        static void DrawLogo(Graphics g, PointF pos, float newWidth, string modelLogoRelativePath)
+        static void DrawLogo(Graphics g, PointF pos, float newWidth, string modelLogoAbsPath)
         {
-            Bitmap originalImage = new Bitmap(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, modelLogoRelativePath));
+            Bitmap originalImage = new Bitmap(modelLogoAbsPath);
             float scaleFactor = newWidth / originalImage.Width;
             int newHeight = (int)(originalImage.Height * scaleFactor);
             g.DrawImage(originalImage, pos.X, pos.Y, newWidth, newHeight);

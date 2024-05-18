@@ -1,10 +1,13 @@
-﻿using leica_watermark_generator.Scripts.Core;
+﻿using leica_watermark_generator.DataModel;
+using leica_watermark_generator.Scripts.Core;
 using leica_watermark_generator.Scripts.DataModel;
 
 Console.WriteLine("-------使用说明-------");
 Console.WriteLine("01.将图片存放在 [程序目录/UserData/Input/(对应机型)]");
 Console.WriteLine("02.运行程序，读取到图片，按任意键继续开始处理");
-Console.WriteLine("[对应机型]等更多高级参数 可以在[程序目录]-[config.json] 中配置");
+
+Console.WriteLine("向[img]中添加品牌Logo的PNG文件，则可以添加品牌，品牌名为PNG的文件名");
+Console.WriteLine("更多高级参数可以在[程序目录]-[config.json] 中配置");
 Console.WriteLine("-----------------");
 
 string currentDirectory = AppDomain.CurrentDomain.BaseDirectory;
@@ -12,6 +15,17 @@ string currentDirectory = AppDomain.CurrentDomain.BaseDirectory;
 List<string> sourceDirs = new List<string>();
 List<string> outputDirs = new List<string>();
 List<string[]> filesList = new List<string[]>();
+
+string[] logos = FileManager.ReadDirPngs(Path.Combine(currentDirectory, "img"));
+List<MakerConfigStruct> m_makerConfigs = new List<MakerConfigStruct>();
+for (int i = 0; i < logos.Length; i++)
+{
+    MakerConfigStruct maker = new MakerConfigStruct();
+    maker.MakerName = Path.GetFileNameWithoutExtension(logos[i]);
+    maker.MakerImage = logos[i];
+    m_makerConfigs.Add(maker);
+}
+FileManager.configData.MakerConfig = m_makerConfigs.ToArray();
 
 for (int i = 0; i < FileManager.configData.MakerConfig.Length; i++)
 {

@@ -1,22 +1,4 @@
 ﻿{
-  "MakerConfig": [
-    {
-      "MakerName": "SONY",
-      "MakerImage": "img/SONY.png"
-    },
-    {
-      "MakerName": "Canon",
-      "MakerImage": "img/Canon.png"
-    },
-    {
-      "MakerName": "Nikon",
-      "MakerImage": "img/Nikon.png"
-    },
-    {
-      "MakerName": "Fujifilm",
-      "MakerImage": "img/Fujifilm.png"
-    }
-  ],
   "IgnoreLensModel": [ "----" ],
   "NoExifImageConfig": {
     "UsePresetInsteadRealtimeUserSelection": false,
