@@ -28,7 +28,7 @@ namespace leica_watermark_generator.DataModel
     public class NoExifImageConfig
     {
         public bool UsePresetInsteadRealtimeUserSelection;
-        public PresetSturct Preset;
+        public PresetSettingsSturct PresetSettings;
         public string[] ModelOptions;
         public string[] LensModelOptions;
         public string[] FocalLengthOptions;
@@ -38,8 +38,16 @@ namespace leica_watermark_generator.DataModel
     }
 
     [System.Serializable]
+    public class PresetSettingsSturct
+    {
+        public string Current;
+        public PresetSturct[] Presets;
+    }
+
+    [System.Serializable]
     public class PresetSturct
     {
+        public string PresetName;
         public string Make;
         public string Model;
         public string LensModel;

@@ -10,47 +10,46 @@ namespace leica_watermark_generator.Scripts.Core
 {
     internal class UserInputManager
     {
-
         /// <summary>
         /// 确保Exif输入和自定义
         /// </summary>
         public static string UserSureExif(ExifTag tag)
         {
             var configData = FileManager.configData;
-
+            var preset = GetCurrentPreset();
             if (configData.NoExifImageConfig.UsePresetInsteadRealtimeUserSelection)
             {
                 if (tag == ExifTag.Make)
                 {
-                    return configData.NoExifImageConfig.Preset.Make;
+                    return preset.Make;
                 }
                 else if (tag == ExifTag.Model)
                 {
-                    return configData.NoExifImageConfig.Preset.Model;
+                    return preset.Model;
                 }
                 else if (tag == ExifTag.LensModel)
                 {
-                    return configData.NoExifImageConfig.Preset.LensModel;
+                    return preset.LensModel;
                 }
                 else if (tag == ExifTag.FocalLength)
                 {
-                    return configData.NoExifImageConfig.Preset.FocalLength.ToString();
+                    return preset.FocalLength.ToString();
                 }
                 else if (tag == ExifTag.ISOSpeedRatings)
                 {
-                    return configData.NoExifImageConfig.Preset.ISOSpeed;
+                    return preset.ISOSpeed;
                 }
                 else if (tag == ExifTag.DateTime)
                 {
-                    return configData.NoExifImageConfig.Preset.DateTime;
+                    return preset.DateTime;
                 }
                 else if (tag == ExifTag.ShutterSpeedValue)
                 {
-                    return configData.NoExifImageConfig.Preset.ShutterSpeedValue;
+                    return preset.ShutterSpeedValue;
                 }
                 else if (tag == ExifTag.ApertureValue)
                 {
-                    return configData.NoExifImageConfig.Preset.ApertureValue;
+                    return preset.ApertureValue;
                 }
             }
             else
@@ -149,5 +148,19 @@ namespace leica_watermark_generator.Scripts.Core
                 }
             }
         }
+
+        static PresetSturct GetCurrentPreset()
+        {
+            var currentName = FileManager.configData.NoExifImageConfig.PresetSettings.Current;
+            for (int i = 0; i < FileManager.configData.NoExifImageConfig.PresetSettings.Presets.Length; i++)
+            {
+                if (FileManager.configData.NoExifImageConfig.PresetSettings.Presets[i].PresetName == currentName)
+                {
+                    return FileManager.configData.NoExifImageConfig.PresetSettings.Presets[i];
+                }
+            }
+            return null;
+        }
+
     }
 }

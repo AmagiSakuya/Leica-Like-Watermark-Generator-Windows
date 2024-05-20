@@ -2,15 +2,21 @@
   "IgnoreLensModel": [ "----" ],
   "NoExifImageConfig": {
     "UsePresetInsteadRealtimeUserSelection": false,
-    "Preset": {
-      "Make": "SONY",
-      "Model": "ILCE-7M4",
-      "LensModel": "Tamron 28-75mm F/2.8 DiIII VXD G2",
-      "FocalLength": "75",
-      "ISOSpeed": "100",
-      "ShutterSpeedValue": "1/125",
-      "ApertureValue": "f/2.8",
-      "DateTime": "2024/05/01 20:15:30"
+    "PresetSettings": {
+      "Current": "A7M4",
+      "Presets": [
+        {
+          "PresetName": "A7M4",
+          "Make": "SONY",
+          "Model": "ILCE-7M4",
+          "LensModel": "Tamron 28-75mm F/2.8 DiIII VXD G2",
+          "FocalLength": "75",
+          "ISOSpeed": "100",
+          "ShutterSpeedValue": "1/125",
+          "ApertureValue": "f/2.8",
+          "DateTime": "2024/05/01 20:15:30"
+        }
+      ]
     },
     "ModelOptions": [ "ILCE-7M4", "EOS R" ],
     "LensModelOptions": [
