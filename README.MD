@@ -33,7 +33,9 @@ Windows下的Leica Like Watermark生成器，用于批量处理相机产生的�
 | IgnoreLensModel       | 从EXIF中读出这些镜头时忽略，让用户处理 (如老蛙镜头 可能会写入"----"这样的数据)   |
 | NoExifImageConfig       | 无法读取Exif信息时的处理方式配置 |
 | --UsePresetInsteadRealtimeUserSelection     | 是否使用预设值，不用在运行时让用户一个一个选择 |
-| --Preset      | 预设值 包含【厂商】【机型】【镜头】【焦段】【ISO】【快门速度】【光圈】【时间】 |
+| --PresetSettings      | 预设值设置 |
+| ----Current      | 当前预设值名称  |
+| ----Presets      | 预设值 包含【预设值名称】【厂商】【机型】【镜头】【焦段】【ISO】【快门速度】【光圈】【时间】  |
 | --ModelOptions      | 当不使用预设值时候，用户可以选择的【机型】选项 |
 | --LensModelOptions      | 当不使用预设值时候，用户可以选择的【镜头】选项 |
 | --FocalLengthOptions      | 当不使用预设值时候，用户可以选择的【焦段】选项 |
