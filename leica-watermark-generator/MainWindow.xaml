@@ -1,0 +1,977 @@
+<Window x:Class="leica_watermark_generator.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:core="clr-namespace:leica_watermark_generator.Core"
+        xmlns:conv="clr-namespace:leica_watermark_generator.Converters"
+        Title="徕卡水印生成器"
+        Height="900" Width="1440" MinHeight="700" MinWidth="1180"
+        Background="{StaticResource B.Bg}"
+        Icon="icon.ico"
+        WindowStyle="None"
+        ResizeMode="CanResize"
+        WindowStartupLocation="CenterScreen"
+        AllowDrop="True"
+        UseLayoutRounding="True"
+        TextOptions.TextFormattingMode="Display"
+        Drop="Window_Drop" DragOver="Window_DragOver"
+        StateChanged="Window_StateChanged">
+
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="44" ResizeBorderThickness="6"
+                      GlassFrameThickness="0" CornerRadius="0" UseAeroCaptionButtons="False" />
+    </WindowChrome.WindowChrome>
+
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="B2V" />
+        <conv:FieldStateBrushConverter x:Key="FieldBg" Kind="bg" />
+        <conv:FieldStateBrushConverter x:Key="FieldBorder" Kind="border" />
+        <conv:NullToVisibilityConverter x:Key="NullToVis" />
+        <conv:NullToVisibilityConverter x:Key="NullToVisInvert" Invert="True" />
+        <conv:TextToVisibilityConverter x:Key="TextToVis" />
+        <conv:TextToVisibilityConverter x:Key="TextToVisInvert" Invert="True" />
+        <conv:PathToImageConverter x:Key="PathToImage" />
+        <conv:PercentConverter x:Key="Percent" />
+        <conv:NullToBoolConverter x:Key="NullToBool" />
+
+        <!-- 颜色小方块 -->
+        <Style x:Key="Swatch" TargetType="Button">
+            <Setter Property="Width" Value="19" />
+            <Setter Property="Height" Value="19" />
+            <Setter Property="Margin" Value="0,0,4,0" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" CornerRadius="4"
+                                BorderBrush="#22FFFFFF" BorderThickness="1" />
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- 占位符 chip -->
+        <Style x:Key="Token" TargetType="Button">
+            <Setter Property="Padding" Value="5,2" />
+            <Setter Property="Margin" Value="0,0,4,4" />
+            <Setter Property="FontSize" Value="10" />
+            <Setter Property="FontFamily" Value="{StaticResource F.Mono}" />
+            <Setter Property="Foreground" Value="#9AA0A9" />
+            <Setter Property="Background" Value="#1B1E23" />
+            <Setter Property="BorderBrush" Value="#2F343C" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1" CornerRadius="4"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource B.Accent}" />
+                                <Setter Property="Foreground" Value="#FFA7AE" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- 图标按钮 -->
+        <Style x:Key="IconButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="Width" Value="30" />
+            <Setter Property="Height" Value="30" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Foreground" Value="{StaticResource B.Text2}" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="{StaticResource B.Line}" />
+        </Style>
+
+        <Style x:Key="FieldLabel" TargetType="TextBlock" BasedOn="{StaticResource T.Label}" />
+
+        <!-- EXIF 输入框：底色 / 边框跟着字段来源变（原值 / 手动改） -->
+        <Style x:Key="ExifBox" TargetType="TextBox" BasedOn="{StaticResource TB.Mono}">
+            <Setter Property="Margin" Value="0,0,0,6" />
+            <Setter Property="Background" Value="{Binding State, Converter={StaticResource FieldBg}}" />
+            <Setter Property="BorderBrush" Value="{Binding State, Converter={StaticResource FieldBorder}}" />
+        </Style>
+
+        <Style x:Key="ExifLabel" TargetType="TextBlock" BasedOn="{StaticResource FieldLabel}">
+            <Setter Property="Margin" Value="0" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+    </Window.Resources>
+
+    <Border x:Name="RootBorder" Background="{StaticResource B.Bg}" BorderBrush="#2C2F36" BorderThickness="1">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="44" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="30" />
+            </Grid.RowDefinitions>
+
+            <!-- ================= 自绘标题栏 ================= -->
+            <Border Grid.Row="0" Background="{StaticResource B.Panel}"
+                    BorderBrush="{StaticResource B.Line}" BorderThickness="0,0,0,1">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0,0,0">
+                        <Image Source="icon.ico" Width="22" Height="22"
+                               RenderOptions.BitmapScalingMode="HighQuality" />
+                        <TextBlock Text="徕卡水印生成器" FontSize="13" FontWeight="SemiBold"
+                                   VerticalAlignment="Center" Margin="9,0,0,0" />
+                        <TextBlock Text="Leica-Like Watermark" FontSize="9.5" VerticalAlignment="Center"
+                                   Foreground="{StaticResource B.Text3}" Margin="8,0,0,0" />
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center"
+                                Margin="0,0,0,0" WindowChrome.IsHitTestVisibleInChrome="True">
+                        <Button x:Name="MinimizeButton" Style="{StaticResource Btn.Caption}"
+                                Click="Minimize_Click" ToolTip="最小化">
+                            <Path Data="M0,5 H10" StrokeThickness="1"
+                                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
+                        </Button>
+                        <Button x:Name="MaximizeButton" Style="{StaticResource Btn.Caption}"
+                                Click="Maximize_Click" ToolTip="最大化">
+                            <Grid Width="10" Height="10">
+                                <Path x:Name="MaxIcon" Data="M0.5,0.5 H9.5 V9.5 H0.5 Z" StrokeThickness="1"
+                                      Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
+                                <Path x:Name="RestoreIcon" Data="M2.5,0.5 H9.5 V7.5 M0.5,2.5 H7.5 V9.5 H0.5 Z"
+                                      StrokeThickness="1" Visibility="Collapsed"
+                                      Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
+                            </Grid>
+                        </Button>
+                        <Button Style="{StaticResource Btn.CaptionClose}" Click="Close_Click"
+                                ToolTip="关闭" Margin="4,0,6,0">
+                            <Path Data="M0,0 L10,10 M10,0 L0,10" StrokeThickness="1.1"
+                                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- ================= 主体 ================= -->
+            <Grid Grid.Row="1">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="300" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="392" />
+                </Grid.ColumnDefinitions>
+
+                <!-- ========== 左：队列 + EXIF ========== -->
+                <Border Grid.Column="0" Background="{StaticResource B.Panel}"
+                        BorderBrush="{StaticResource B.Line}" BorderThickness="0,0,1,0">
+                    <Grid Margin="12,12,12,10">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+
+                        <Grid Grid.Row="0">
+                            <TextBlock Text="图片队列" Style="{StaticResource T.Section}" Margin="0" />
+                            <TextBlock Text="{Binding QueueCountText}" HorizontalAlignment="Right"
+                                       Style="{StaticResource T.Muted}" />
+                        </Grid>
+
+                        <!-- 添加图片 / 文件夹 -->
+                        <Grid Grid.Row="1" Margin="0,2,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="6" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Button Content="＋ 添加图片" Height="30" Click="AddImages_Click"
+                                    Background="{StaticResource B.Panel3}" BorderBrush="#31363F" />
+                            <Button Grid.Column="2" Content="＋ 文件夹" Height="30" Click="AddFolder_Click" />
+                        </Grid>
+
+                        <Grid Grid.Row="2" Margin="0,10,0,0">
+                            <ListBox x:Name="QueueList" ItemsSource="{Binding Queue}"
+                                     SelectedItem="{Binding SelectedItem, Mode=TwoWay}"
+                                     ScrollViewer.VerticalScrollBarVisibility="Auto">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid Height="46" Margin="4,1">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="44" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <Border Width="44" Height="36" CornerRadius="4" Background="#0A0B0D"
+                                                    ClipToBounds="True">
+                                                <Image Source="{Binding Thumbnail}" Stretch="UniformToFill" />
+                                            </Border>
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="8,0,4,0">
+                                                <TextBlock Text="{Binding FileName}" FontSize="12"
+                                                           TextTrimming="CharacterEllipsis" />
+                                                <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                                    <TextBlock Text="{Binding SizeText}" FontSize="10"
+                                                               Foreground="{StaticResource B.Text3}" />
+                                                    <TextBlock Text="缺 EXIF" FontSize="9.5" Margin="6,0,0,0"
+                                                               Foreground="{StaticResource B.Warn}"
+                                                               Visibility="{Binding Exif.HasMissing, Converter={StaticResource B2V}}" />
+                                                </StackPanel>
+                                            </StackPanel>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+
+                            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center"
+                                        Visibility="{Binding SelectedItem, Converter={StaticResource NullToVisInvert}}">
+                                <TextBlock Text="把图片拖进来" HorizontalAlignment="Center"
+                                           Foreground="{StaticResource B.Text3}" />
+                                <TextBlock Text="或者点上面的「添加图片」" FontSize="10.5" Margin="0,4,0,0"
+                                           HorizontalAlignment="Center" Foreground="{StaticResource B.Text3}" />
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- 移除 / 清空 -->
+                        <Grid Grid.Row="3" Margin="0,8,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="6" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Button Content="移除选中" Height="30" FontSize="11.5"
+                                    IsEnabled="{Binding SelectedItem, Converter={StaticResource NullToBool}}"
+                                    Click="RemoveSelected_Click" />
+                            <Button Grid.Column="2" Content="清空队列" Height="30" FontSize="11.5"
+                                    Style="{StaticResource Btn.DangerGhost}" Click="ClearQueue_Click" />
+                        </Grid>
+
+                        <Border Grid.Row="4" Style="{StaticResource Sep}" />
+
+                        <Grid Grid.Row="5" Margin="0,0,0,7">
+                            <TextBlock Text="EXIF 数据" Style="{StaticResource T.Section}" Margin="0"
+                                       VerticalAlignment="Center" />
+                            <Button Content="{Binding ExifActionText}" Style="{StaticResource Btn.Tiny}"
+                                    HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,-2,0"
+                                    Click="ExifAction_Click"
+                                    ToolTip="有 EXIF 的图重新读文件；没有 EXIF 的图套用预设里的默认 EXIF" />
+                        </Grid>
+
+                        <Grid Grid.Row="6" DataContext="{Binding SelectedItem}"
+                              Visibility="{Binding Converter={StaticResource NullToVis}}">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="*" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <ScrollViewer MaxHeight="300" VerticalScrollBarVisibility="Auto">
+                                <Grid DataContext="{Binding Exif}" Margin="0,0,6,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="32" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="10" />
+                                        <ColumnDefinition Width="32" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding ModelField.Label}"
+                                               Style="{StaticResource ExifLabel}" />
+                                    <TextBox Grid.Row="0" Grid.Column="1" Grid.ColumnSpan="4"
+                                             Style="{StaticResource ExifBox}" DataContext="{Binding ModelField}"
+                                             Text="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                             ToolTip="{Binding Value}" />
+                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="{Binding LensField.Label}"
+                                               Style="{StaticResource ExifLabel}" />
+                                    <TextBox Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="4"
+                                             Style="{StaticResource ExifBox}" DataContext="{Binding LensField}"
+                                             Text="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                             ToolTip="{Binding Value}" />
+                                    <TextBlock Grid.Row="2" Grid.Column="0" Text="{Binding FocalField.Label}"
+                                               Style="{StaticResource ExifLabel}" />
+                                    <TextBox Grid.Row="2" Grid.Column="1" Style="{StaticResource ExifBox}" DataContext="{Binding FocalField}"
+                                             Text="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                    <TextBlock Grid.Row="2" Grid.Column="3" Text="{Binding ApertureField.Label}"
+                                               Style="{StaticResource ExifLabel}" />
+                                    <TextBox Grid.Row="2" Grid.Column="4" Style="{StaticResource ExifBox}" DataContext="{Binding ApertureField}"
+                                             Text="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                    <TextBlock Grid.Row="3" Grid.Column="0" Text="{Binding ShutterField.Label}"
+                                               Style="{StaticResource ExifLabel}" />
+                                    <TextBox Grid.Row="3" Grid.Column="1" Style="{StaticResource ExifBox}" DataContext="{Binding ShutterField}"
+                                             Text="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                    <TextBlock Grid.Row="3" Grid.Column="3" Text="{Binding IsoField.Label}"
+                                               Style="{StaticResource ExifLabel}" />
+                                    <TextBox Grid.Row="3" Grid.Column="4" Style="{StaticResource ExifBox}" DataContext="{Binding IsoField}"
+                                             Text="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                    <TextBlock Grid.Row="4" Grid.Column="0" Text="{Binding DateTimeField.Label}"
+                                               Style="{StaticResource ExifLabel}" />
+                                    <TextBox Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="4"
+                                             Style="{StaticResource ExifBox}" DataContext="{Binding DateTimeField}"
+                                             Text="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                             ToolTip="{Binding Value}" />
+                                </Grid>
+                            </ScrollViewer>
+
+                            <StackPanel Grid.Row="1" Margin="0,8,0,0">
+                                <WrapPanel>
+                                    <Border Width="8" Height="8" CornerRadius="2" Background="#202329"
+                                            BorderBrush="#3A3F48" BorderThickness="1" VerticalAlignment="Center" />
+                                    <TextBlock Text="EXIF" Style="{StaticResource T.Muted}" FontSize="10"
+                                               Margin="4,0,10,0" />
+                                    <Border Width="8" Height="8" CornerRadius="2" Background="#15283B"
+                                            BorderBrush="#2E5B7E" BorderThickness="1" VerticalAlignment="Center" />
+                                    <TextBlock Text="预设值" Style="{StaticResource T.Muted}" FontSize="10"
+                                               Margin="4,0,10,0" />
+                                    <Border Width="8" Height="8" CornerRadius="2" Background="#33280F"
+                                            BorderBrush="#7A5C1C" BorderThickness="1" VerticalAlignment="Center" />
+                                    <TextBlock Text="手填" Style="{StaticResource T.Muted}" FontSize="10"
+                                               Margin="4,0,0,0" />
+                                </WrapPanel>
+                                <TextBlock Text="留空即按空值输出；改的值只用于本次导出。"
+                                           Style="{StaticResource T.Muted}" TextWrapping="Wrap" Margin="0,6,0,0" />
+                            </StackPanel>
+                        </Grid>
+                    </Grid>
+                </Border>
+
+            <!-- ========== 中：预览 ========== -->
+                <Grid Grid.Column="1" Background="#0A0B0D">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="38" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <Border Grid.Row="0" BorderBrush="{StaticResource B.LineSoft}" BorderThickness="0,0,0,1">
+                        <Grid Margin="14,0">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding SelectedItem.FileName}" FontSize="12" />
+                                <TextBlock Text=" · " Foreground="{StaticResource B.Text3}" />
+                                <TextBlock Text="{Binding CanvasText}" Style="{StaticResource T.Mono}" VerticalAlignment="Center" />
+                            </StackPanel>
+                            <TextBlock Text="在预览里拖动文字可调整位置" HorizontalAlignment="Right"
+                                       VerticalAlignment="Center" Style="{StaticResource T.Muted}" />
+                        </Grid>
+                    </Border>
+
+                    <Grid x:Name="StageHost" Grid.Row="1" ClipToBounds="True" SizeChanged="Stage_SizeChanged"
+                          Background="Transparent">
+
+                        <Grid x:Name="Frame" HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <Image x:Name="PhotoImage" Grid.Row="0" Stretch="Fill"
+                                   Source="{Binding PreviewPhoto}"
+                                   RenderOptions.BitmapScalingMode="HighQuality" />
+
+                            <Grid x:Name="StripHost" Grid.Row="1" Background="White"
+                                  MouseLeftButtonDown="Strip_MouseDown"
+                                  MouseMove="Strip_MouseMove"
+                                  MouseLeftButtonUp="Strip_MouseUp"
+                                  MouseLeave="Strip_MouseLeave">
+                                <Image x:Name="StripImage" Stretch="Fill" IsHitTestVisible="False"
+                                       Source="{Binding StripSource}"
+                                       RenderOptions.BitmapScalingMode="HighQuality" />
+                                <Rectangle x:Name="SelBox" Stroke="{StaticResource B.Accent}" StrokeThickness="1"
+                                           HorizontalAlignment="Left" VerticalAlignment="Top"
+                                           Visibility="Collapsed" IsHitTestVisible="False" />
+                            </Grid>
+                        </Grid>
+
+                        <!-- 空状态 -->
+                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center"
+                                    Visibility="{Binding SelectedItem, Converter={StaticResource NullToVisInvert}}">
+                            <Border Width="64" Height="64" CornerRadius="16" Background="#141518"
+                                    BorderBrush="{StaticResource B.Line}" BorderThickness="1"
+                                    HorizontalAlignment="Center">
+                                <TextBlock Text="＋" FontSize="26" Foreground="{StaticResource B.Text3}"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
+                            <TextBlock Text="还没有选中图片" Margin="0,14,0,0" HorizontalAlignment="Center"
+                                       FontSize="13" />
+                            <TextBlock Text="把照片拖到窗口里，或点左边「添加图片」" Margin="0,6,0,0"
+                                       HorizontalAlignment="Center" Style="{StaticResource T.Muted}" />
+                            <Button Content="选择图片…" Style="{StaticResource Btn.Small}" Margin="0,16,0,0"
+                                    HorizontalAlignment="Center" Click="AddImages_Click" />
+                        </StackPanel>
+
+                        <!-- 导出进度 -->
+                        <Border VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="0,0,0,18"
+                                Background="#E6151719" BorderBrush="{StaticResource B.Line}" BorderThickness="1"
+                                CornerRadius="8" Padding="16,10" MinWidth="320"
+                                Visibility="{Binding IsBusy, Converter={StaticResource B2V}}">
+                            <StackPanel>
+                                <TextBlock Text="{Binding Status}" FontSize="11.5" Margin="0,0,0,8" />
+                                <ProgressBar Value="{Binding Progress, Mode=OneWay}" Maximum="100" />
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+                </Grid>
+
+                <!-- ========== 右：预设 + 参数 + 导出 ========== -->
+                <Border Grid.Column="2" Background="{StaticResource B.Panel}"
+                        BorderBrush="{StaticResource B.Line}" BorderThickness="1,0,0,0">
+                    <Grid Margin="12,12,12,12">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+
+                        <!-- 预设选择 -->
+                        <StackPanel Grid.Row="0">
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                <Border Width="3" Height="11" CornerRadius="1.5" VerticalAlignment="Center"
+                                        Background="{StaticResource B.Accent}" />
+                                <TextBlock Text="预设" Margin="7,0,0,0" VerticalAlignment="Center"
+                                           FontSize="11.5" FontWeight="SemiBold"
+                                           Foreground="{StaticResource B.Text2}" />
+                            </StackPanel>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <ComboBox Height="32" FontSize="13" ItemsSource="{Binding Presets}"
+                                          SelectedItem="{Binding SelectedPreset, Mode=TwoWay}"
+                                          DisplayMemberPath="Name" />
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="6,0,0,0">
+                                    <Button Style="{StaticResource IconButton}" ToolTip="新建预设" Click="NewPreset_Click">
+                                        <Path Data="M5,0 V10 M0,5 H10" StrokeThickness="1.2"
+                                              Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
+                                    </Button>
+                                    <Button Style="{StaticResource IconButton}" ToolTip="复制当前预设"
+                                            Click="DuplicatePreset_Click" Margin="5,0,0,0">
+                                        <Path Data="M0.5,3.5 H6.5 V9.5 H0.5 Z M3.5,0.5 H9.5 V6.5" StrokeThickness="1.1"
+                                              Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
+                                    </Button>
+                                    <Button Style="{StaticResource IconButton}" ToolTip="删除当前预设"
+                                            Click="DeletePreset_Click" Margin="5,0,0,0">
+                                        <Path Data="M0.5,2.5 H9.5 M2.5,2.5 V9.5 H7.5 V2.5 M1.5,2.5 V1 H8.5 V2.5"
+                                              StrokeThickness="1.1"
+                                              Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
+                                    </Button>
+                                </StackPanel>
+                            </Grid>
+                        </StackPanel>
+
+                        <TabControl x:Name="ParamTabs" Grid.Row="1" Margin="0,12,0,0">
+                            <!-- ===== 文字 ===== -->
+                            <TabItem Header="基础">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="*" />
+                                    </Grid.RowDefinitions>
+
+                                    <!-- 预设名称 -->
+                                    <Border Style="{StaticResource Card}" Padding="10,9">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="10" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="预设名称" Style="{StaticResource T.Label}"
+                                                       VerticalAlignment="Center" Margin="0" />
+                                            <TextBox Grid.Column="2" FontSize="12" FontWeight="SemiBold"
+                                                     ToolTip="这套预设的名字，作用于队列里的全部图片"
+                                                     Text="{Binding SelectedPreset.Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                        </Grid>
+                                    </Border>
+
+                                    <Border Grid.Row="1" Style="{StaticResource Card}" Padding="6" Margin="0,10,0,0">
+                                        <ListBox x:Name="LineList" Height="136" ItemsSource="{Binding Style.Lines}"
+                                                 SelectedItem="{Binding SelectedLine, Mode=TwoWay}">
+                                            <ListBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Grid Height="24" Margin="2,0">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="Auto" />
+                                                            <ColumnDefinition Width="*" />
+                                                            <ColumnDefinition Width="Auto" />
+                                                        </Grid.ColumnDefinitions>
+                                                        <CheckBox IsChecked="{Binding Enabled, Mode=TwoWay}"
+                                                                  VerticalAlignment="Center"
+                                                                  ToolTip="显示 / 隐藏这一行" />
+                                                        <TextBlock Grid.Column="1" Text="{Binding Name}" Margin="8,0,0,0"
+                                                                   VerticalAlignment="Center" FontSize="11.5"
+                                                                   TextTrimming="CharacterEllipsis" />
+                                                        <TextBlock Grid.Column="2" VerticalAlignment="Center"
+                                                                   FontFamily="{StaticResource F.Mono}" FontSize="9.5"
+                                                                   Foreground="{StaticResource B.Text3}">
+                                                            <Run Text="{Binding X, Mode=OneWay, StringFormat={}{0:0}}" />
+                                                            <Run Text="," />
+                                                            <Run Text="{Binding Y, Mode=OneWay, StringFormat={}{0:0}}" />
+                                                        </TextBlock>
+                                                    </Grid>
+                                                </DataTemplate>
+                                            </ListBox.ItemTemplate>
+                                        </ListBox>
+                                    </Border>
+
+                                    <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,7,0,0">
+                                        <Button Content="＋ 添加" Style="{StaticResource Btn.Small}" Click="AddLine_Click" />
+                                        <Button Content="− 删除" Style="{StaticResource Btn.Small}" Margin="5,0,0,0"
+                                                Click="RemoveLine_Click" />
+                                        <Button Content="↑" Style="{StaticResource Btn.Small}" Margin="5,0,0,0"
+                                                Width="26" Click="MoveLineUp_Click" ToolTip="上移" />
+                                        <Button Content="↓" Style="{StaticResource Btn.Small}" Margin="4,0,0,0"
+                                                Width="26" Click="MoveLineDown_Click" ToolTip="下移" />
+                                    </StackPanel>
+
+                                    <ScrollViewer Grid.Row="3" Margin="0,10,0,0" VerticalScrollBarVisibility="Auto">
+                                    <StackPanel>
+                                                                                <StackPanel Visibility="{Binding SelectedLine, Converter={StaticResource NullToVis}}">
+
+                                            <TextBlock Text="内容模板" Style="{StaticResource T.Section}" />
+                                            <TextBox x:Name="TemplateBox" Style="{StaticResource TB.Mono}"
+                                                     Text="{Binding SelectedLine.Template, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                     GotKeyboardFocus="TemplateBox_GotFocus" />
+                                            <WrapPanel Margin="0,6,0,0">
+                                                <Button Style="{StaticResource Token}" Content="{}{Model}" Click="Token_Click" />
+                                                <Button Style="{StaticResource Token}" Content="{}{LensModel}" Click="Token_Click" />
+                                                <Button Style="{StaticResource Token}" Content="{}{FocalLength}" Click="Token_Click" />
+                                                <Button Style="{StaticResource Token}" Content="{}{Aperture}" Click="Token_Click" />
+                                                <Button Style="{StaticResource Token}" Content="{}{Shutter}" Click="Token_Click" />
+                                                <Button Style="{StaticResource Token}" Content="{}{ISO}" Click="Token_Click" />
+                                                <Button Style="{StaticResource Token}" Content="{}{DateTime}" Click="Token_Click" />
+                                                <Button Style="{StaticResource Token}" Content="{}{Date}" Click="Token_Click" />
+                                                <Button Style="{StaticResource Token}" Content="{}{Time}" Click="Token_Click" />
+                                                <Button Style="{StaticResource Token}" Content="{}{FileName}" Click="Token_Click" />
+                                            </WrapPanel>
+
+                                            <Border Style="{StaticResource Sep}" />
+
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="12" />
+                                                    <ColumnDefinition Width="72" />
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel>
+                                                    <TextBlock Text="字体" Style="{StaticResource FieldLabel}" />
+                                                    <ComboBox ItemsSource="{x:Static core:WatermarkRenderer.AvailableFonts}"
+                                                              SelectedItem="{Binding SelectedLine.FontFamily, Mode=TwoWay}" />
+                                                </StackPanel>
+                                                <StackPanel Grid.Column="2">
+                                                    <TextBlock Text="字号 px" Style="{StaticResource FieldLabel}" />
+                                                    <TextBox Text="{Binding SelectedLine.Size, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0:0.#}}" />
+                                                </StackPanel>
+                                            </Grid>
+
+                                            <Grid Margin="0,10,0,0">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="12" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel>
+                                                    <TextBlock Text="颜色" Style="{StaticResource FieldLabel}" />
+                                                    <TextBox Style="{StaticResource TB.Mono}"
+                                                             Text="{Binding SelectedLine.Color, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                </StackPanel>
+                                                <StackPanel Grid.Column="2">
+                                                    <TextBlock Text="描边宽度" Style="{StaticResource FieldLabel}" />
+                                                    <TextBox Text="{Binding SelectedLine.StrokeWidth, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0:0.#}}" />
+                                                </StackPanel>
+                                            </Grid>
+                                            <WrapPanel Margin="0,7,0,0">
+                                                <Button Style="{StaticResource Swatch}" Background="#000000" Tag="#000000" Click="LineColor_Click" />
+                                                <Button Style="{StaticResource Swatch}" Background="#FFFFFF" Tag="#FFFFFF" Click="LineColor_Click" />
+                                                <Button Style="{StaticResource Swatch}" Background="#7E7E7C" Tag="#7E7E7C" Click="LineColor_Click" />
+                                                <Button Style="{StaticResource Swatch}" Background="#9A9A98" Tag="#9A9A98" Click="LineColor_Click" />
+                                                <Button Style="{StaticResource Swatch}" Background="#E20612" Tag="#E20612" Click="LineColor_Click" />
+                                                <Button Style="{StaticResource Swatch}" Background="#F0B429" Tag="#F0B429" Click="LineColor_Click" />
+                                                <Button Style="{StaticResource Swatch}" Background="#3ECF8E" Tag="#3ECF8E" Click="LineColor_Click" />
+                                                <Button Style="{StaticResource Swatch}" Background="#5B8DEF" Tag="#5B8DEF" Click="LineColor_Click" />
+                                            </WrapPanel>
+
+                                            <Grid Margin="0,10,0,0">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="12" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel>
+                                                    <TextBlock Text="位置 X" Style="{StaticResource FieldLabel}" />
+                                                    <TextBox Text="{Binding SelectedLine.X, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0:0}}" />
+                                                </StackPanel>
+                                                <StackPanel Grid.Column="2">
+                                                    <TextBlock Text="位置 Y" Style="{StaticResource FieldLabel}" />
+                                                    <TextBox Text="{Binding SelectedLine.Y, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0:0}}" />
+                                                </StackPanel>
+                                            </Grid>
+
+                                            <Grid Margin="0,10,0,0">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Text="不透明度" Style="{StaticResource FieldLabel}" VerticalAlignment="Center" />
+                                                <TextBlock Grid.Column="1" Text="{Binding SelectedLine.Opacity, Converter={StaticResource Percent}}"
+                                                           Style="{StaticResource T.Mono}" />
+                                            </Grid>
+                                            <Slider Minimum="0.1" Maximum="1" Value="{Binding SelectedLine.Opacity, Mode=TwoWay}" />
+                                        </StackPanel>
+
+                                        <!-- 画布 -->
+                                        <Border Style="{StaticResource Sep}" Margin="0,14,0,12" />
+
+                                        <TextBlock Text="画布" Style="{StaticResource T.Section}" Margin="0,0,0,8" />
+                                        <Border Style="{StaticResource Card}" Padding="10">
+                                            <StackPanel>
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="10" />
+                                                        <ColumnDefinition Width="*" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <StackPanel>
+                                                        <TextBlock Text="基准宽度" Style="{StaticResource FieldLabel}" />
+                                                        <TextBox Text="{Binding Style.BaseWidth, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
+                                                    </StackPanel>
+                                                    <StackPanel Grid.Column="2">
+                                                        <TextBlock Text="水印高度" Style="{StaticResource FieldLabel}" />
+                                                        <TextBox Text="{Binding Style.StripeHeight, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
+                                                    </StackPanel>
+                                                </Grid>
+                                                <TextBlock Text="所有坐标都基于这个坐标系，导出时按原图宽度等比缩放"
+                                                           Style="{StaticResource T.Muted}" TextWrapping="Wrap" Margin="0,7,0,0" />
+
+                                                <Grid Margin="0,10,0,4">
+                                                    <TextBlock Text="背景色" Style="{StaticResource FieldLabel}" VerticalAlignment="Center" Margin="0" />
+                                                    <TextBlock Text="{Binding Style.Background}" HorizontalAlignment="Right"
+                                                               Style="{StaticResource T.Mono}" />
+                                                </Grid>
+                                                <TextBox Style="{StaticResource TB.Mono}"
+                                                         Text="{Binding Style.Background, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                <WrapPanel Margin="0,7,0,0">
+                                                    <Button Style="{StaticResource Swatch}" Background="#FFFFFF" Tag="#FFFFFF" Click="BgColor_Click" />
+                                                    <Button Style="{StaticResource Swatch}" Background="#F4F1EA" Tag="#F4F1EA" Click="BgColor_Click" />
+                                                    <Button Style="{StaticResource Swatch}" Background="#EDEDED" Tag="#EDEDED" Click="BgColor_Click" />
+                                                    <Button Style="{StaticResource Swatch}" Background="#7E7E7C" Tag="#7E7E7C" Click="BgColor_Click" />
+                                                    <Button Style="{StaticResource Swatch}" Background="#1A1A1A" Tag="#1A1A1A" Click="BgColor_Click" />
+                                                    <Button Style="{StaticResource Swatch}" Background="#0B0B0C" Tag="#0B0B0C" Click="BgColor_Click" />
+                                                </WrapPanel>
+                                            </StackPanel>
+                                        </Border>
+
+                                        <TextBlock Text="焦距" Style="{StaticResource T.Section}" Margin="0,14,0,8" />
+                                        <Border Style="{StaticResource Card}" Padding="10">
+                                            <StackPanel>
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto" />
+                                                        <ColumnDefinition Width="10" />
+                                                        <ColumnDefinition Width="*" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Text="焦段系数" Style="{StaticResource FieldLabel}" VerticalAlignment="Center" Margin="0" />
+                                                    <TextBox Grid.Column="2"
+                                                             Text="{Binding Style.FocalLengthMultiplier, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0:0.##}}" />
+                                                </Grid>
+                                                <TextBlock Text="把实际焦距换算成等效焦距：全画幅填 1，APS-C 填 1.5"
+                                                           Style="{StaticResource T.Muted}" TextWrapping="Wrap" Margin="0,7,0,0" />
+                                            </StackPanel>
+                                        </Border>
+                                    </StackPanel>
+                                </ScrollViewer>
+                                </Grid>
+                            </TabItem>
+
+                            <!-- ===== 图标 ===== -->
+                            <TabItem Header="图标">
+                                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                    <StackPanel>
+                                        <TextBlock Text="品牌图标 / LOGO" Style="{StaticResource T.Section}" />
+
+                                        <Border Style="{StaticResource Card}" Padding="10">
+                                            <StackPanel>
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto" />
+                                                        <ColumnDefinition Width="*" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <Border Width="64" Height="40" CornerRadius="5" Background="#0A0B0D"
+                                                            BorderBrush="{StaticResource B.LineSoft}" BorderThickness="1">
+                                                        <Image Source="{Binding Style.Logo.File, Converter={StaticResource PathToImage}}"
+                                                               Stretch="Uniform" Margin="4" />
+                                                    </Border>
+                                                    <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center">
+                                                        <CheckBox Content="显示 Logo" IsChecked="{Binding Style.Logo.Enabled, Mode=TwoWay}" />
+                                                        <TextBlock Text="{Binding Style.Logo.File}" Style="{StaticResource T.Muted}"
+                                                                   TextTrimming="CharacterEllipsis" Margin="0,4,0,0" />
+                                                    </StackPanel>
+                                                </Grid>
+
+                                                <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                                                    <Button Content="选择 PNG…" Style="{StaticResource Btn.Small}" Click="BrowseLogo_Click" />
+                                                    <Button Content="img 目录" Style="{StaticResource Btn.Small}" Margin="6,0,0,0"
+                                                            Click="OpenLogoFolder_Click" />
+                                                </StackPanel>
+                                                <TextBlock Text="这个预设还没有 Logo，选一个 PNG（建议带透明通道）"
+                                                           Style="{StaticResource T.Muted}" TextWrapping="Wrap" Margin="0,8,0,0"
+                                                           Foreground="{StaticResource B.Warn}"
+                                                           Visibility="{Binding Style.Logo.File, Converter={StaticResource TextToVisInvert}}" />
+
+                                                <Grid Margin="0,10,0,0">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="10" />
+                                                        <ColumnDefinition Width="*" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <StackPanel>
+                                                        <TextBlock Text="宽度 px" Style="{StaticResource FieldLabel}" />
+                                                        <TextBox Text="{Binding Style.Logo.Width, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0:0}}" />
+                                                    </StackPanel>
+                                                    <StackPanel Grid.Column="2">
+                                                        <TextBlock Text="X" Style="{StaticResource FieldLabel}" />
+                                                        <TextBox Text="{Binding Style.Logo.X, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0:0}}" />
+                                                    </StackPanel>
+                                                </Grid>
+                                                <Grid Margin="0,8,0,0">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="10" />
+                                                        <ColumnDefinition Width="*" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <StackPanel>
+                                                        <TextBlock Text="Y" Style="{StaticResource FieldLabel}" />
+                                                        <TextBox Text="{Binding Style.Logo.Y, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0:0}}" />
+                                                    </StackPanel>
+                                                    <StackPanel Grid.Column="2">
+                                                        <TextBlock Text="不透明度" Style="{StaticResource FieldLabel}" />
+                                                        <Slider Minimum="0.1" Maximum="1" Value="{Binding Style.Logo.Opacity, Mode=TwoWay}" />
+                                                    </StackPanel>
+                                                </Grid>
+                                            </StackPanel>
+                                        </Border>
+
+                                        <Border Style="{StaticResource Sep}" />
+
+                                        <TextBlock Text="分隔竖线" Style="{StaticResource T.Section}" />
+                                        <Border Style="{StaticResource Card}" Padding="10">
+                                            <StackPanel>
+                                                <CheckBox Content="显示分隔线" IsChecked="{Binding Style.Separator.Enabled, Mode=TwoWay}" />
+                                                <Grid Margin="0,10,0,0">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="10" />
+                                                        <ColumnDefinition Width="*" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <StackPanel>
+                                                        <TextBlock Text="X" Style="{StaticResource FieldLabel}" />
+                                                        <TextBox Text="{Binding Style.Separator.X, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0:0}}" />
+                                                    </StackPanel>
+                                                    <StackPanel Grid.Column="2">
+                                                        <TextBlock Text="粗细" Style="{StaticResource FieldLabel}" />
+                                                        <TextBox Text="{Binding Style.Separator.Width, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0:0.#}}" />
+                                                    </StackPanel>
+                                                </Grid>
+                                                <Grid Margin="0,8,0,0">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="10" />
+                                                        <ColumnDefinition Width="*" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <StackPanel>
+                                                        <TextBlock Text="Y 起点" Style="{StaticResource FieldLabel}" />
+                                                        <TextBox Text="{Binding Style.Separator.Y1, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0:0}}" />
+                                                    </StackPanel>
+                                                    <StackPanel Grid.Column="2">
+                                                        <TextBlock Text="Y 终点" Style="{StaticResource FieldLabel}" />
+                                                        <TextBox Text="{Binding Style.Separator.Y2, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0:0}}" />
+                                                    </StackPanel>
+                                                </Grid>
+                                                <TextBlock Text="颜色" Style="{StaticResource FieldLabel}" Margin="0,8,0,4" />
+                                                <TextBox Style="{StaticResource TB.Mono}"
+                                                         Text="{Binding Style.Separator.Color, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                <WrapPanel Margin="0,7,0,0">
+                                                    <Button Style="{StaticResource Swatch}" Background="#000000" Tag="#000000" Click="SepColor_Click" />
+                                                    <Button Style="{StaticResource Swatch}" Background="#7E7E7C" Tag="#7E7E7C" Click="SepColor_Click" />
+                                                    <Button Style="{StaticResource Swatch}" Background="#9A9A98" Tag="#9A9A98" Click="SepColor_Click" />
+                                                    <Button Style="{StaticResource Swatch}" Background="#FFFFFF" Tag="#FFFFFF" Click="SepColor_Click" />
+                                                    <Button Style="{StaticResource Swatch}" Background="#E20612" Tag="#E20612" Click="SepColor_Click" />
+                                                </WrapPanel>
+                                            </StackPanel>
+                                        </Border>
+                                    </StackPanel>
+                                </ScrollViewer>
+                            </TabItem>
+
+                            <!-- ===== 默认 EXIF ===== -->
+                            <TabItem Header="默认 EXIF">
+                                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                    <StackPanel>
+                                        <TextBlock Text="默认 EXIF" Style="{StaticResource T.Section}" />
+
+                                        <Border Style="{StaticResource Card}" Padding="10">
+                                            <StackPanel>
+                                                <TextBlock Text="没有 EXIF 的图片，在左边点「读取预设 EXIF」就能把这套值填进去。只是模板，不会自动套到任何图片上。"
+                                                           Style="{StaticResource T.Muted}" TextWrapping="Wrap" Margin="0,0,0,10" />
+
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="32" />
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="10" />
+                                                        <ColumnDefinition Width="32" />
+                                                        <ColumnDefinition Width="*" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <Grid.RowDefinitions>
+                                                        <RowDefinition Height="Auto" />
+                                                        <RowDefinition Height="Auto" />
+                                                        <RowDefinition Height="Auto" />
+                                                        <RowDefinition Height="Auto" />
+                                                        <RowDefinition Height="Auto" />
+                                                    </Grid.RowDefinitions>
+
+                                                <TextBlock Grid.Row="0" Grid.Column="0" Text="品牌" Style="{StaticResource ExifLabel}" />
+                                                <TextBox Grid.Row="0" Grid.Column="1" Style="{StaticResource TB.Mono}"
+                                                         Text="{Binding SelectedPreset.Defaults.Make, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                <TextBlock Grid.Row="0" Grid.Column="3" Text="机型" Style="{StaticResource ExifLabel}" />
+                                                <TextBox Grid.Row="0" Grid.Column="4" Style="{StaticResource TB.Mono}"
+                                                         Text="{Binding SelectedPreset.Defaults.Model, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                <TextBlock Grid.Row="1" Grid.Column="0" Text="镜头" Style="{StaticResource ExifLabel}" />
+                                                <TextBox Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="4" Style="{StaticResource TB.Mono}"
+                                                         Text="{Binding SelectedPreset.Defaults.LensModel, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                <TextBlock Grid.Row="2" Grid.Column="0" Text="焦段" Style="{StaticResource ExifLabel}" />
+                                                <TextBox Grid.Row="2" Grid.Column="1" Style="{StaticResource TB.Mono}"
+                                                         Text="{Binding SelectedPreset.Defaults.FocalLength, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                <TextBlock Grid.Row="2" Grid.Column="3" Text="光圈" Style="{StaticResource ExifLabel}" />
+                                                <TextBox Grid.Row="2" Grid.Column="4" Style="{StaticResource TB.Mono}"
+                                                         Text="{Binding SelectedPreset.Defaults.ApertureValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                <TextBlock Grid.Row="3" Grid.Column="0" Text="快门" Style="{StaticResource ExifLabel}" />
+                                                <TextBox Grid.Row="3" Grid.Column="1" Style="{StaticResource TB.Mono}"
+                                                         Text="{Binding SelectedPreset.Defaults.ShutterSpeedValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                <TextBlock Grid.Row="3" Grid.Column="3" Text="ISO" Style="{StaticResource ExifLabel}" />
+                                                <TextBox Grid.Row="3" Grid.Column="4" Style="{StaticResource TB.Mono}"
+                                                         Text="{Binding SelectedPreset.Defaults.ISO, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                <TextBlock Grid.Row="4" Grid.Column="0" Text="时间" Style="{StaticResource ExifLabel}" />
+                                                <TextBox Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="4" Style="{StaticResource TB.Mono}"
+                                                         Text="{Binding SelectedPreset.Defaults.DateTime, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                </Grid>
+
+                                                <Grid Margin="0,4,0,0">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="8" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <Button Content="用当前图片填充" Height="28" FontSize="11.5"
+                                                            Click="SaveDefaults_Click"
+                                                            ToolTip="把左边当前图片的拍摄参数存成这个预设的默认值" />
+                                                    <Button Grid.Column="2" Content="清空" Height="28" FontSize="11.5"
+                                                            Style="{StaticResource Btn.DangerGhost}"
+                                                            Click="ClearDefaults_Click" ToolTip="把这里的值全部清空" />
+                                                </Grid>
+                                            </StackPanel>
+                                        </Border>
+
+                                        <TextBlock Text="这套值跟着预设走：换个预设就换一套默认 EXIF，队列里的图片都不会被自动改。"
+                                                   Style="{StaticResource T.Muted}" TextWrapping="Wrap" Margin="0,10,0,0" />
+                                    </StackPanel>
+                                </ScrollViewer>
+                            </TabItem>
+                        </TabControl>
+
+                        <!-- 导出模块：独立卡片，和预设视觉上分开 -->
+                        <Border Grid.Row="2" Margin="0,14,0,0" Background="#1B1E23"
+                                BorderBrush="{StaticResource B.Line}" BorderThickness="1"
+                                CornerRadius="8" Padding="12,10,12,12">
+                            <StackPanel>
+                                <Grid Margin="0,0,0,9">
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <Border Width="3" Height="11" CornerRadius="1.5" VerticalAlignment="Center"
+                                                Background="{StaticResource B.Accent}" />
+                                        <TextBlock Text="导出" Margin="7,0,0,0" VerticalAlignment="Center"
+                                                   FontSize="11.5" FontWeight="SemiBold"
+                                                   Foreground="{StaticResource B.Text2}" />
+                                    </StackPanel>
+                                    <TextBlock Text="不属于预设" HorizontalAlignment="Right" VerticalAlignment="Center"
+                                               FontSize="10" Foreground="{StaticResource B.Text3}" />
+                                </Grid>
+
+                                <Grid Margin="0,0,0,5">
+                                    <TextBlock Text="导出到" Style="{StaticResource T.Label}" VerticalAlignment="Center" />
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                        <Button Content="选择…" Style="{StaticResource Btn.Tiny}"
+                                                Click="BrowseOutput_Click" ToolTip="选择导出目录" />
+                                        <Button Content="打开" Style="{StaticResource Btn.Tiny}" Margin="4,0,0,0"
+                                                Click="OpenOutput_Click" ToolTip="在资源管理器里打开导出目录" />
+                                    </StackPanel>
+                                </Grid>
+                                <Grid>
+                                    <TextBox FontSize="11" Style="{StaticResource TB.Mono}"
+                                             Text="{Binding Settings.OutputDir, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                             ToolTip="{Binding Settings.OutputDir}" />
+                                    <TextBlock Text="还没选导出目录，点上面「选择…」" IsHitTestVisible="False"
+                                               Margin="10,0,0,0" VerticalAlignment="Center" FontSize="11"
+                                               Foreground="{StaticResource B.Text3}"
+                                               Visibility="{Binding Settings.OutputDir, Converter={StaticResource TextToVisInvert}}" />
+                                </Grid>
+
+                                <Grid Margin="0,9,0,0">
+                                    <TextBlock Text="JPG 质量" Style="{StaticResource T.Label}" VerticalAlignment="Center" />
+                                    <TextBlock Text="{Binding QualityText}" HorizontalAlignment="Right"
+                                               Style="{StaticResource T.Mono}" VerticalAlignment="Center" />
+                                </Grid>
+                                <Slider Minimum="60" Maximum="100" Value="{Binding QualityValue, Mode=TwoWay}"
+                                        IsSnapToTickEnabled="True" TickFrequency="1" Margin="0,1,0,0" />
+
+                                <TextBlock Text="文件命名" Style="{StaticResource T.Label}" Margin="0,8,0,4" />
+                                <TextBox x:Name="NamingBox" FontSize="11" Style="{StaticResource TB.Mono}"
+                                         GotKeyboardFocus="TemplateBox_GotFocus"
+                                         Text="{Binding Settings.NamingPattern, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                <WrapPanel Margin="0,5,0,0">
+                                    <Button Style="{StaticResource Token}" Content="{}{filename}" Click="NameToken_Click" />
+                                    <Button Style="{StaticResource Token}" Content="{}{date}" Click="NameToken_Click" />
+                                    <Button Style="{StaticResource Token}" Content="{}{brand}" Click="NameToken_Click" />
+                                    <Button Style="{StaticResource Token}" Content="{}{model}" Click="NameToken_Click" />
+                                </WrapPanel>
+
+                                <Grid Margin="0,9,0,9">
+                                    <CheckBox Content="同名覆盖" FontSize="11" IsChecked="{Binding Settings.Overwrite, Mode=TwoWay}" />
+                                    <CheckBox Content="完成后打开目录" FontSize="11" HorizontalAlignment="Right"
+                                              IsChecked="{Binding Settings.OpenAfterExport, Mode=TwoWay}" />
+                                </Grid>
+
+                                <Button Content="{Binding ExportText}" Style="{StaticResource Btn.Primary}"
+                                        Height="42" FontSize="14" Click="Export_Click" />
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+                </Border>
+            </Grid>
+
+            <!-- ================= 状态栏 ================= -->
+            <Border Grid.Row="2" Background="#101114" BorderBrush="{StaticResource B.Line}" BorderThickness="0,1,0,0">
+                <Grid Margin="14,0">
+                    <TextBlock Text="{Binding Status}" VerticalAlignment="Center" FontSize="11"
+                               Foreground="{StaticResource B.Text2}" TextTrimming="CharacterEllipsis" />
+                    <TextBlock HorizontalAlignment="Right" VerticalAlignment="Center" FontSize="10.5"
+                               Foreground="{StaticResource B.Text3}">
+                        <Run Text="{Binding CanvasText, Mode=OneWay}" />
+                        <Run Text=" · " />
+                        <Run Text="参数自动保存" />
+                    </TextBlock>
+                </Grid>
+            </Border>
+        </Grid>
+    </Border>
+</Window>
