@@ -206,7 +206,7 @@ namespace leica_watermark_generator.ViewModels
                 var exif = ExifService.Read(path);
                 if (SelectedPreset != null) exif.PushPreset(SelectedPreset.Defaults);
                 item.Exif = exif;
-                item.Thumbnail = ExifService.LoadThumbnail(path, 120);
+                item.Thumbnail = ExifService.LoadThumbnail(path, 120, exif.Orientation);
                 Queue.Add(item);
                 added++;
             }
@@ -407,7 +407,9 @@ namespace leica_watermark_generator.ViewModels
 
         private void LoadPreviewPhoto(QueueItem? item)
         {
-            PreviewPhoto = item == null ? null : ExifService.LoadThumbnail(item.FilePath, 1600);
+            PreviewPhoto = item == null
+                ? null
+                : ExifService.LoadThumbnail(item.FilePath, 1600, item.Exif.Orientation);
         }
 
         /// <summary>重新渲染水印条（参数变了就调它）</summary>

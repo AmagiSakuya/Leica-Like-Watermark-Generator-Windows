@@ -106,7 +106,8 @@ namespace leica_watermark_generator
                     File.WriteAllText(Path.Combine(AppContext.BaseDirectory, "shot.log"),
                         $"Actual={window.ActualWidth}x{window.ActualHeight} Dpi={dpi.DpiScaleX}x{dpi.DpiScaleY} " +
                         $"WorkArea={SystemParameters.WorkArea.Width}x{SystemParameters.WorkArea.Height} " +
-                        $"Primary={SystemParameters.PrimaryScreenWidth}x{SystemParameters.PrimaryScreenHeight}");
+                        $"Primary={SystemParameters.PrimaryScreenWidth}x{SystemParameters.PrimaryScreenHeight} " +
+                        $"Preview={window.DebugPreviewInfo()}");
 
                     SaveShot(window, "shot.png");
 

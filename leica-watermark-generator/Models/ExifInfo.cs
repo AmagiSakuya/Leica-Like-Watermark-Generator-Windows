@@ -105,6 +105,9 @@ namespace leica_watermark_generator.Models
         /// <summary>文件名（不含扩展名），供 {FileName} 占位符使用</summary>
         public string FileName { get; set; } = "";
 
+        /// <summary>EXIF Orientation（1~8），预览和导出都按它转正</summary>
+        public int Orientation { get; set; } = 1;
+
         public string this[string key]
         {
             get => AllFields.FirstOrDefault(f => f.Key == key)?.Value ?? "";

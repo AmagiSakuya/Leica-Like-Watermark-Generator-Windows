@@ -161,6 +161,13 @@ namespace leica_watermark_generator
             UpdatePreview();
         }
 
+        internal string DebugPreviewInfo()
+        {
+            var p = _vm.PreviewPhoto;
+            string size = p == null ? "null" : $"{p.PixelWidth}x{p.PixelHeight}";
+            return $"{size} orient={_vm.SelectedItem?.Exif.Orientation}";
+        }
+
         internal void DebugFillDefaults()
         {
             _vm.SaveCurrentAsDefaults();
